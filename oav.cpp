@@ -7,6 +7,11 @@ extern "C" {
 #include <libavutil/pixfmt.h>
 }
 
+#if LIBAVCODEC_VERSION_MAJOR < 57
+    #define AV_PIX_FMT_RGBA PIX_FMT_RGBA
+    #define av_frame_alloc avcodec_alloc_frame
+#endif
+
 using namespace omega;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -124,7 +129,7 @@ bool VideoStream::open(const String& filename)
     // Allocate video frame
     if(myFrame) av_free(myFrame);
     myFrame = av_frame_alloc();
-    oassert(pFrame == NULL);
+    oassert(myFrame == NULL);
 
     if(myFrameRGB) av_free(myFrameRGB);
     myFrameRGB = av_frame_alloc();
