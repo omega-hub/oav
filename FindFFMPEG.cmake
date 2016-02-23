@@ -35,66 +35,89 @@
 
 if(WIN32)
     set(FFMPEG_INCLUDE_DIR $ENV{FFMPEG_DIR}/include)
+    find_library(FFMPEG_avformat_LIBRARY avformat
+      $ENV{FFMPEG_DIR}
+      $ENV{FFMPEG_DIR}/lib
+      $ENV{FFMPEG_DIR}/libavformat
+    )
+
+    find_library(FFMPEG_avcodec_LIBRARY avcodec
+      $ENV{FFMPEG_DIR}
+      $ENV{FFMPEG_DIR}/lib
+      $ENV{FFMPEG_DIR}/libavcodec
+    )
+
+    find_library(FFMPEG_avutil_LIBRARY avutil
+      $ENV{FFMPEG_DIR}
+      $ENV{FFMPEG_DIR}/lib
+      $ENV{FFMPEG_DIR}/libavutil
+    )
+
+    if(NOT DISABLE_SWSCALE)
+      find_library(FFMPEG_swscale_LIBRARY swscale
+        $ENV{FFMPEG_DIR}
+        $ENV{FFMPEG_DIR}/lib
+        $ENV{FFMPEG_DIR}/libswscale
+      )
+    endif(NOT DISABLE_SWSCALE)
+
+    find_library(FFMPEG_avdevice_LIBRARY avdevice
+      $ENV{FFMPEG_DIR}
+      $ENV{FFMPEG_DIR}/lib
+      $ENV{FFMPEG_DIR}/libavdevice
+    )
+
+    find_library(_FFMPEG_z_LIBRARY_ z
+      $ENV{FFMPEG_DIR}
+      $ENV{FFMPEG_DIR}/lib
+    )
 else()
     set(FFMPEG_INCLUDE_DIR /usr/include/ffmpeg)
+    find_library(FFMPEG_avformat_LIBRARY avformat
+    PATHS
+      /usr/local/lib
+      /usr/lib
+      /usr/lib64
+    NO_DEFAULT_PATH
+    )
+
+    find_library(FFMPEG_avcodec_LIBRARY avcodec
+      /usr/local/lib
+      /usr/lib
+      /usr/lib64
+    NO_DEFAULT_PATH
+    )
+
+    find_library(FFMPEG_avutil_LIBRARY avutil
+      /usr/local/lib
+      /usr/lib
+      /usr/lib64
+    NO_DEFAULT_PATH
+    )
+
+    if(NOT DISABLE_SWSCALE)
+      find_library(FFMPEG_swscale_LIBRARY swscale
+        /usr/local/lib
+        /usr/lib
+       /usr/lib64
+    NO_DEFAULT_PATH
+      )
+    endif(NOT DISABLE_SWSCALE)
+
+    find_library(FFMPEG_avdevice_LIBRARY avdevice
+      /usr/local/lib
+      /usr/lib
+      /usr/lib64
+    NO_DEFAULT_PATH
+    )
+
+    find_library(_FFMPEG_z_LIBRARY_ z
+      /usr/local/lib
+      /usr/lib
+      /usr/lib64
+    NO_DEFAULT_PATH
+    )
 endif()
-
-find_library(FFMPEG_avformat_LIBRARY avformat
-  $ENV{FFMPEG_DIR}
-  $ENV{FFMPEG_DIR}/lib
-  $ENV{FFMPEG_DIR}/libavformat
-  /usr/local/lib
-  /usr/lib
-  /usr/lib64
-)
-
-find_library(FFMPEG_avcodec_LIBRARY avcodec
-  $ENV{FFMPEG_DIR}
-  $ENV{FFMPEG_DIR}/lib
-  $ENV{FFMPEG_DIR}/libavcodec
-  /usr/local/lib
-  /usr/lib
-  /usr/lib64
-)
-
-find_library(FFMPEG_avutil_LIBRARY avutil
-  $ENV{FFMPEG_DIR}
-  $ENV{FFMPEG_DIR}/lib
-  $ENV{FFMPEG_DIR}/libavutil
-  /usr/local/lib
-  /usr/lib
-  /usr/lib64
-)
-
-if(NOT DISABLE_SWSCALE)
-  find_library(FFMPEG_swscale_LIBRARY swscale
-    $ENV{FFMPEG_DIR}
-    $ENV{FFMPEG_DIR}/lib
-    $ENV{FFMPEG_DIR}/libswscale
-    /usr/local/lib
-    /usr/lib
-   /usr/lib64
-  )
-endif(NOT DISABLE_SWSCALE)
-
-find_library(FFMPEG_avdevice_LIBRARY avdevice
-  $ENV{FFMPEG_DIR}
-  $ENV{FFMPEG_DIR}/lib
-  $ENV{FFMPEG_DIR}/libavdevice
-  /usr/local/lib
-  /usr/lib
-  /usr/lib64
-)
-
-find_library(_FFMPEG_z_LIBRARY_ z
-  $ENV{FFMPEG_DIR}
-  $ENV{FFMPEG_DIR}/lib
-  /usr/local/lib
-  /usr/lib
-  /usr/lib64
-)
-
-
 
 if(FFMPEG_INCLUDE_DIR)
   if(FFMPEG_avformat_LIBRARY)

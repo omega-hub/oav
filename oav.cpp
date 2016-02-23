@@ -129,7 +129,7 @@ bool VideoStream::open(const String& filename)
     // Allocate video frame
     if(myFrame) av_free(myFrame);
     myFrame = av_frame_alloc();
-    oassert(myFrame == NULL);
+    oassert(myFrame != NULL);
 
     if(myFrameRGB) av_free(myFrameRGB);
     myFrameRGB = av_frame_alloc();
