@@ -4,16 +4,30 @@ module_version(1.0)
 # on OSX and linux, assume the ffmpeg dev libraries are installed.
 if(WIN32)
     set(EXTLIB_DIR ${CMAKE_BINARY_DIR}/3rdparty/ffmpeg)
-    set(FFMPEG_FILENAME ffmpeg-20160213-git-588e2e3-win32)
+    if(OMEGA_ARCH_32)
+        set(FFMPEG_FILENAME ffmpeg-20160213-git-588e2e3-win32)
+    else()
+        set(FFMPEG_FILENAME ffmpeg-20160213-git-588e2e3-win64)
+    endif()
+    
     if(NOT EXISTS ${EXTLIB_DIR})
         # Download & extract ffmpeg libs
         message("Downloading ffmpeg development libraries...")
-        file(DOWNLOAD 
-            http://ffmpeg.zeranoe.com/builds/win32/shared/${FFMPEG_FILENAME}-shared.7z
-            ${EXTLIB_DIR}/ffmpeg-shared.7z SHOW_PROGRESS)
-        file(DOWNLOAD 
-            http://ffmpeg.zeranoe.com/builds/win32/dev/${FFMPEG_FILENAME}-dev.7z
-            ${EXTLIB_DIR}/ffmpeg-dev.7z SHOW_PROGRESS)
+        if(OMEGA_ARCH_32)
+            file(DOWNLOAD 
+                http://ffmpeg.zeranoe.com/builds/win32/shared/${FFMPEG_FILENAME}-shared.7z
+                ${EXTLIB_DIR}/ffmpeg-shared.7z SHOW_PROGRESS)
+            file(DOWNLOAD 
+                http://ffmpeg.zeranoe.com/builds/win32/dev/${FFMPEG_FILENAME}-dev.7z
+                ${EXTLIB_DIR}/ffmpeg-dev.7z SHOW_PROGRESS)
+        else()
+            file(DOWNLOAD 
+                http://ffmpeg.zeranoe.com/builds/win64/shared/${FFMPEG_FILENAME}-shared.7z
+                ${EXTLIB_DIR}/ffmpeg-shared.7z SHOW_PROGRESS)
+            file(DOWNLOAD 
+                http://ffmpeg.zeranoe.com/builds/win64/dev/${FFMPEG_FILENAME}-dev.7z
+                ${EXTLIB_DIR}/ffmpeg-dev.7z SHOW_PROGRESS)
+        endif()
         message("Extracting ffmpeg development libraries...")
         execute_process(COMMAND ${CMAKE_COMMAND} -E tar xzf 
             ${EXTLIB_DIR}/ffmpeg-shared.7z 
