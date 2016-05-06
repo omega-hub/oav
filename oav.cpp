@@ -53,7 +53,7 @@ public:
 
 private:
     bool myPlaying;
-    bool myLoop = true;
+    bool myLoop;
 
     AVFormatContext* myFormatCtx;
     AVCodecContext* myCodecCtx;
@@ -68,21 +68,21 @@ private:
 
     int myVideoStream;
     int myNumVideoStreams;
+	double myCurrentTime;
     bool myTexCreated;
-	bool isScroll = false;
     float myQuadX, myQuadY;
     float myFrameDuration;
     float myLastFrameTime;
-	int64_t myDuration = 0;
-	int64_t nextScroll = 0;
-	int64_t timeBase;
+
+	double myDuration;
+	double timeBase;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 bool VideoStream::open(const String& filename)
 {
     av_register_all();
-
+	myLoop = true;
     String filepath;
     if(!DataManager::findFile(filename, filepath))
     {
@@ -96,7 +96,6 @@ bool VideoStream::open(const String& filename)
 	
     if(avformat_open_input(&myFormatCtx, filepath.c_str(), NULL, NULL) != 0)
     {
-		//myDuration = myFormatCtx->duration;
         ofwarn("[VideoStream::open] could not open file %1%", %filepath);
         return false;
     }
@@ -125,8 +124,10 @@ bool VideoStream::open(const String& filename)
 
     // Get a pointer to the codec context for the video stream
     myCodecCtx = myFormatCtx->streams[myVideoStream]->codec;
-	timeBase = (int64_t(myCodecCtx->time_base.num) * AV_TIME_BASE) / int64_t(myCodecCtx->time_base.den);
+	//timeBase = (int64_t(myCodecCtx->time_base.num) * AV_TIME_BASE) / int64_t(myCodecCtx->time_base.den);
+	timeBase = ((double)(myFormatCtx->streams[myVideoStream]->time_base.num)) / ((double)(myFormatCtx->streams[myVideoStream]->time_base.den));
     // Find the decoder for the video stream
+	myDuration = myFormatCtx->streams[myVideoStream]->duration * timeBase;
     myCodec = avcodec_find_decoder(myCodecCtx->codec_id);
     if(myCodec == NULL)
     {
@@ -173,30 +174,15 @@ void VideoStream::play()
 {
 	setPlaying(true);
 }
-
+/*
 bool VideoStream::seekToTime(double time) {
-	/*
-	isScroll = true;
-	nextScroll = time;
-	loadNextFrame();
-	*/
 	int frameFinished = 0;
 	AVPacket packet;
 	if (!myFormatCtx)
 		return false;
-	/*
-	int64_t seekTarget = time * AV_TIME_BASE;
-	if (av_seek_frame(myFormatCtx, -1, seekTarget, AVSEEK_FLAG_BACKWARD) < 0)
-		return false;
-	return true; */
-	//int64_t newTimeStamp = (int)time
-	//av_seek_frame(AVFormatContext *s, int stream_index, newTimeStamp, NULL)
-		int64_t seekTarget = (time * AV_TIME_BASE);
-		//av_seek_frame(myFormatCtx, -1, 0, 0);
-
-		av_seek_frame(myFormatCtx, -1, seekTarget, AVSEEK_FLAG_BACKWARD);
-		//myCodecCtx->hurry_up = 1;
-	
+	int64_t seekTarget = (time * AV_TIME_BASE);
+	av_seek_frame(myFormatCtx, -1, seekTarget, AVSEEK_FLAG_BACKWARD);
+	//myCodecCtx->hurry_up = 1;
 	do {
 		av_read_frame(myFormatCtx, &packet);
 		// should really be checking that this is a video packet
@@ -212,6 +198,59 @@ bool VideoStream::seekToTime(double time) {
 	} while (1);
 	//myCodecCtx->hurry_up = 0;
 }
+*/
+/*
+bool VideoStream::seekToTime(double time) {
+	if (!myFormatCtx)
+		return false;
+	int temp = (time / timeBase);
+	int64_t seekTarget = (int64_t)(temp );
+	if (av_seek_frame(myFormatCtx, -1, seekTarget, NULL) < 0)
+		return false;
+	return true;
+}
+*/
+
+bool VideoStream::seekToTime(double time)
+{
+	int frameFinished = 0;
+	AVPacket pkt;
+	/*if (!isOk())
+		return false;*/
+	time = time / timeBase;
+	//ofwarn("\t avformat_seek_file to %d\n",time);
+	int flags = AVSEEK_FLAG_FRAME;
+	if (time < myFrame->pkt_dts)
+	{
+		flags |= AVSEEK_FLAG_BACKWARD;
+	}
+
+	if(av_seek_frame(myFormatCtx,-1,time,flags))
+	{
+	//ofwarn("\nFailed to seek for time %d",time);
+	return false;
+	}
+
+	avcodec_flush_buffers(myCodecCtx);
+	//read frame without converting it
+	frameFinished = 0;
+	do
+	if (av_read_frame(myFormatCtx, &pkt) == 0) {
+		avcodec_decode_video2(myCodecCtx, myFrame, &frameFinished, &pkt);
+		//decode_packet(&got_frame, 0, false);
+		av_free_packet(&pkt);
+	}
+	else
+	{
+	//read_cache = true;
+	pkt.data = NULL;
+	pkt.size = 0;
+	break;
+	}
+	while (!(frameFinished && myFrame->pkt_dts >= time));
+	return true;
+}
+
 
 bool VideoStream::seekToFrame(int seekFrame){
 	if (!myFormatCtx)
@@ -227,10 +266,6 @@ void VideoStream::loadNextFrame()
     int frameFinished = 0;
 
     AVPacket packet;
-	
-	if (isScroll) {
-		av_seek_frame(myFormatCtx, packet.stream_index, nextScroll, NULL);
-	}
 	//Comment
     while(frameFinished == 0)
     {
@@ -239,8 +274,9 @@ void VideoStream::loadNextFrame()
             myPlaying = false;
             frameFinished = 1;
 			if (myLoop) { 
-				av_seek_frame(myFormatCtx, packet.stream_index, 0, AVSEEK_FLAG_ANY);
+				//av_seek_frame(myFormatCtx, packet.stream_index, 0, AVSEEK_FLAG_ANY);
 				myPlaying = true;
+				seekToTime(2);
 			}
         }
         else
@@ -257,7 +293,11 @@ void VideoStream::loadNextFrame()
 						// Convert the image from its native format to GL-friendly RGB values
 						sws_scale(myImgConvertCtx, 
 							myFrame->data, myFrame->linesize, 0, myCodecCtx->height, myFrameRGB->data, myFrameRGB->linesize);
-
+						//double mult2 = av_q2d(myCodecCtx->time_base) / 1000;
+						//double mult = av_q2d(myCodecCtx->time_base) / 2000;
+						//double mult2 = av_q2d()
+						myCurrentTime = myFrame->best_effort_timestamp*timeBase;
+						
 						byte* out = myPixels->map();
 						int p = myPixels->getPitch();
 						int h = myCodecCtx->height;
